@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.db
+.env
+data/_nasa_raw/
+data/_battery_skunkworks.tar.gz

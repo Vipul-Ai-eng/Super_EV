@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ohmwatch — EV Asset &amp; Supply Chain Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --graphite:#14171A;
+    --panel:#1B1F24;
+    --panel-raised:#20252B;
+    --hairline:#2A2F36;
+    --amber:#F2A93B;
+    --amber-dim:#8A6B34;
+    --teal:#2DD9C4;
+    --red:#E5484D;
+    --text-bright:#E8EAED;
+    --text-muted:#8B95A1;
+    --text-faint:#5B6470;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--graphite);
+    color:var(--text-bright);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .display{font-family:'Space Grotesk', sans-serif;}
+
+  /* ---------- Header ---------- */
+  header{
+    border-bottom:1px solid var(--hairline);
+    padding:20px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:16px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:34px; height:34px; border:2px solid var(--amber);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-weight:700; color:var(--amber);
+    font-size:15px; flex-shrink:0;
+  }
+  .brand h1{font-family:'Space Grotesk'; font-size:19px; font-weight:600; letter-spacing:0.01em;}
+  .brand p{font-size:12px; color:var(--text-muted); margin-top:2px;}
+
+  .ticker{
+    display:flex; gap:28px; flex-wrap:wrap;
+  }
+  .ticker-item{text-align:right;}
+  .ticker-item .val{font-family:'IBM Plex Mono'; font-size:20px; font-weight:500;}
+  .ticker-item .lbl{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.08em; margin-top:2px;}
+  .val.ok{color:var(--teal);} .val.warn{color:var(--amber);} .val.bad{color:var(--red);}
+
+  /* ---------- Reconciliation strip (signature element) ---------- */
+  .recon-strip{
+    border-bottom:1px solid var(--hairline);
+    background:linear-gradient(180deg, #191D22, #16191D);
+    padding:10px 28px;
+    display:flex; align-items:center; gap:10px;
+    font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--text-muted);
+    overflow:hidden; white-space:nowrap;
+    min-height:40px;
+  }
+  .recon-strip .live-dot{
+    width:7px; height:7px; border-radius:50%; background:var(--text-faint); flex-shrink:0;
+  }
+  .recon-strip .live-dot.active{background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 1.1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns:250px 1fr 320px;
+    gap:0;
+    min-height:calc(100vh - 130px);
+  }
+  @media (max-width:1000px){ .layout{grid-template-columns:1fr;} }
+
+  .rail{border-right:1px solid var(--hairline); padding:20px;}
+  .rail.right{border-right:none; border-left:1px solid var(--hairline);}
+  .rail h2, .center h2{
+    font-family:'Space Grotesk'; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--text-faint); margin-bottom:14px; font-weight:600;
+  }
+
+  /* ---------- Agent stations ---------- */
+  .station{
+    display:flex; align-items:center; gap:10px;
+    padding:11px 10px; border:1px solid var(--hairline); border-radius:3px;
+    margin-bottom:8px; background:var(--panel);
+  }
+  .station .light{width:8px; height:8px; border-radius:50%; background:var(--text-faint); flex-shrink:0;}
+  .station .light.idle{background:var(--text-faint);}
+  .station .light.running{background:var(--amber); box-shadow:0 0 6px var(--amber); animation:pulse 0.9s infinite;}
+  .station .light.flagged{background:var(--red); box-shadow:0 0 6px var(--red);}
+  .station .light.resolved{background:var(--teal); box-shadow:0 0 6px var(--teal);}
+  .station .name{font-size:12.5px; font-weight:500;}
+  .station .sub{font-size:10px; color:var(--text-faint); margin-top:1px;}
+
+  .run-btn{
+    width:100%; margin-top:16px; padding:12px; background:var(--amber);
+    border:none; border-radius:3px; color:#1A1300; font-weight:600;
+    font-family:'Space Grotesk'; font-size:13px; cursor:pointer; letter-spacing:0.02em;
+  }
+  .run-btn:hover{background:#FFC066;}
+  .run-btn:disabled{background:var(--amber-dim); cursor:progress; color:#4a3a1a;}
+
+  /* ---------- Center: action queue ---------- */
+  .center{padding:20px 24px;}
+  .empty-state{
+    color:var(--text-muted); font-size:13px; border:1px dashed var(--hairline);
+    padding:40px 20px; text-align:center; border-radius:4px;
+  }
+  .conflict-banner{
+    border:1px solid var(--red); background:rgba(229,72,77,0.08);
+    border-radius:4px; padding:14px 16px; margin-bottom:14px;
+  }
+  .conflict-banner .tag{color:var(--red); font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em;}
+  .conflict-banner p{font-size:13px; margin-top:6px; line-height:1.5;}
+  .conflict-banner .res{font-size:12.5px; color:var(--teal); margin-top:8px;}
+
+  .action-card{
+    border:1px solid var(--hairline); background:var(--panel);
+    border-radius:4px; padding:16px; margin-bottom:10px;
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .action-card .priority{
+    font-family:'IBM Plex Mono'; font-size:20px; color:var(--amber); font-weight:500;
+    min-width:28px;
+  }
+  .action-card .body{flex:1;}
+  .action-card .owner{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em;}
+  .action-card .action-text{font-size:13.5px; margin:5px 0 8px; line-height:1.45;}
+  .action-card .tradeoff{font-size:12px; color:var(--text-muted); font-style:italic;}
+  .action-card .buttons{display:flex; gap:8px; margin-top:10px;}
+  .action-card button{
+    font-family:'IBM Plex Sans'; font-size:11.5px; padding:6px 12px; border-radius:3px;
+    border:1px solid var(--hairline); background:transparent; color:var(--text-bright); cursor:pointer;
+  }
+  .action-card button.approve{border-color:var(--teal); color:var(--teal);}
+  .action-card button.approve:hover{background:rgba(45,217,196,0.1);}
+  .action-card button.reject{border-color:var(--red); color:var(--red);}
+  .action-card button.reject:hover{background:rgba(229,72,77,0.1);}
+  .action-card.done{opacity:0.45;}
+
+  /* ---------- Right: audit log terminal ---------- */
+  .log-line{font-family:'IBM Plex Mono'; font-size:11px; color:var(--text-muted); padding:6px 0; border-bottom:1px solid var(--hairline); line-height:1.4;}
+  .log-line .t{color:var(--text-faint);}
+  .log-line .a{color:var(--amber);}
+
+  footer{padding:14px 28px; font-size:11px; color:var(--text-faint); border-top:1px solid var(--hairline);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">Ω</div>
+    <div>
+      <h1>OHMWATCH</h1>
+      <p>Unified EV Asset &amp; Supply Chain Intelligence — 6 agents, 1 shared graph</p>
+    </div>
+  </div>
+  <div class="ticker" id="ticker">
+    <div class="ticker-item"><div class="val mono" id="t-fleet">—</div><div class="lbl">Fleet EVs / Diesel</div></div>
+    <div class="ticker-item"><div class="val mono" id="t-soh">—</div><div class="lbl">Avg Battery SOH</div></div>
+    <div class="ticker-item"><div class="val mono" id="t-risk">—</div><div class="lbl">Suppliers Flagged</div></div>
+    <div class="ticker-item"><div class="val mono" id="t-scope1">—</div><div class="lbl">Scope 1 Target Progress</div></div>
+  </div>
+</header>
+
+<div class="recon-strip" id="recon-strip">
+  <div class="live-dot" id="recon-dot"></div>
+  <span id="recon-text">Awaiting first analysis cycle — press RUN ANALYSIS CYCLE to start.</span>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: Agent stations -->
+  <div class="rail">
+    <h2>Specialist Agents</h2>
+    <div class="station" data-agent="apm_agent">
+      <div class="light idle"></div>
+      <div><div class="name">APM Agent</div><div class="sub">Battery SOH / RUL</div></div>
+    </div>
+    <div class="station" data-agent="procurement_readiness_agent">
+      <div class="light idle"></div>
+      <div><div class="name">Procurement &amp; Readiness</div><div class="sub">EV transition scoring</div></div>
+    </div>
+    <div class="station" data-agent="supply_chain_risk_agent">
+      <div class="light idle"></div>
+      <div><div class="name">Supply Chain Risk</div><div class="sub">Concentration / ESG</div></div>
+    </div>
+    <div class="station" data-agent="quality_intelligence_agent">
+      <div class="light idle"></div>
+      <div><div class="name">Quality Intelligence</div><div class="sub">Cell-to-pack drift</div></div>
+    </div>
+    <div class="station" data-agent="carbon_intelligence_agent">
+      <div class="light idle"></div>
+      <div><div class="name">Carbon / Net Zero</div><div class="sub">Scope 1+3 tracking</div></div>
+    </div>
+    <div class="station" data-agent="maintenance_ops_agent">
+      <div class="light idle"></div>
+      <div><div class="name">Maintenance Ops</div><div class="sub">Schedule optimiser</div></div>
+    </div>
+
+    <button class="run-btn" id="run-btn" onclick="runCycle()">RUN ANALYSIS CYCLE</button>
+  </div>
+
+  <!-- CENTER: Unified action queue -->
+  <div class="center">
+    <h2>Unified Action Queue — Orchestrator Reconciliation</h2>
+    <div id="conflicts-container"></div>
+    <div id="queue-container">
+      <div class="empty-state">No action queue yet. Run an analysis cycle to see all six agents reconcile into one prioritized, approvable queue.</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: audit log -->
+  <div class="rail right">
+    <h2>Audit Trail</h2>
+    <div id="log-container">
+      <div class="log-line">System idle. Every agent write appears here in order — this is the reasoning trail behind each recommendation.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Ohmwatch MVP — battery data source: NASA Ames PCoE (real) blended with synthetic fleet data for demo purposes. Not a production deployment.</footer>
+
+<script>
+// Same-origin by default (the dashboard is served by the same FastAPI app
+// that exposes /run-cycle, /graph, /events). Override only if you split
+// frontend/backend into separate deployments.
+const API_BASE = window.OHMWATCH_API_BASE || "";
+
+async function fetchGraph(){
+  try{
+    const res = await fetch(`${API_BASE}/graph`);
+    const data = await res.json();
+    renderTicker(data);
+  }catch(e){ console.warn("graph fetch failed", e); }
+}
+
+function renderTicker(graph){
+  const vehicles = Object.values(graph.vehicles || {});
+  const batteries = Object.values(graph.batteries || {});
+  const suppliers = Object.values(graph.suppliers || {});
+  const evCount = vehicles.filter(v => v.powertrain === "EV").length;
+  const dieselCount = vehicles.length - evCount;
+  const avgSoh = batteries.length
+    ? (batteries.reduce((s,b)=>s+(b.soh_pct||0),0)/batteries.length).toFixed(1)
+    : "—";
+  const flaggedSuppliers = suppliers.filter(s => (s.concentration_share_pct||0) > 50 || (s.recent_deviation_flags||0) > 0).length;
+
+  document.getElementById("t-fleet").textContent = `${evCount} / ${dieselCount}`;
+  const sohEl = document.getElementById("t-soh");
+  sohEl.textContent = `${avgSoh}%`;
+  sohEl.className = "val mono " + (avgSoh < 75 ? "bad" : avgSoh < 85 ? "warn" : "ok");
+  const riskEl = document.getElementById("t-risk");
+  riskEl.textContent = flaggedSuppliers;
+  riskEl.className = "val mono " + (flaggedSuppliers > 0 ? "warn" : "ok");
+
+  const baseline = graph.emissions && graph.emissions.baseline;
+  document.getElementById("t-scope1").textContent = baseline ? `target ${baseline.target_reduction_pct_2030}%` : "—";
+}
+
+function setStation(agentKey, state){
+  const el = document.querySelector(`.station[data-agent="${agentKey}"] .light`);
+  if(!el) return;
+  el.className = "light " + state;
+}
+
+function resetStations(){
+  document.querySelectorAll(".station .light").forEach(l => l.className = "light idle");
+}
+
+async function runCycle(){
+  const btn = document.getElementById("run-btn");
+  btn.disabled = true;
+  btn.textContent = "RUNNING...";
+  resetStations();
+  document.getElementById("recon-dot").className = "live-dot active";
+  document.getElementById("recon-text").textContent = "Dispatching context to six specialist agents...";
+
+  const agentOrder = ["apm_agent","procurement_readiness_agent","supply_chain_risk_agent",
+                      "quality_intelligence_agent","carbon_intelligence_agent","maintenance_ops_agent"];
+  agentOrder.forEach((a,i) => setTimeout(()=>setStation(a,"running"), i*180));
+
+  try{
+    const res = await fetch(`${API_BASE}/run-cycle`, {method:"POST"});
+    const data = await res.json();
+    renderResult(data);
+  }catch(e){
+    document.getElementById("recon-text").textContent = "Could not reach backend at " + API_BASE + " — is uvicorn running?";
+    document.getElementById("recon-dot").className = "live-dot";
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "RUN ANALYSIS CYCLE";
+  }
+}
+
+function renderResult(data){
+  const specialists = data.specialist_outputs || {};
+  const reconciled = data.reconciled || {};
+
+  // agent station lights: flagged if that agent produced risk findings, else resolved
+  Object.keys(specialists).forEach(name => {
+    const out = specialists[name];
+    const hasFlags = (out.flags||out.drift_signals||out.at_risk_batteries||[]).length > 0;
+    setStation(name, hasFlags ? "flagged" : "resolved");
+  });
+
+  const conflicts = reconciled.conflicts_detected || [];
+  const reinforcements = reconciled.reinforcements_detected || [];
+  document.getElementById("recon-text").textContent =
+    conflicts.length
+      ? `${conflicts.length} conflict(s) detected across agents — reconciled into one action queue.`
+      : "No conflicts detected this cycle. Agents agree.";
+  document.getElementById("recon-dot").className = "live-dot";
+
+  const conflictsHtml = conflicts.map(c => `
+    <div class="conflict-banner">
+      <div class="tag">CONFLICT — ${(c.agents_involved||[]).join(" vs ")}</div>
+      <p>${c.description || ""}</p>
+      <div class="res">→ ${c.resolution_recommendation || ""}</div>
+    </div>
+  `).join("");
+  document.getElementById("conflicts-container").innerHTML = conflictsHtml;
+
+  const queue = reconciled.unified_action_queue || [];
+  const queueHtml = queue.length ? queue.map((item, idx) => `
+    <div class="action-card" id="card-${idx}">
+      <div class="priority mono">${item.priority ?? idx+1}</div>
+      <div class="body">
+        <div class="owner">${item.owner_agent || "orchestrator"}</div>
+        <div class="action-text">${item.action || ""}</div>
+        <div class="tradeoff">${item.trade_off_explained || ""}</div>
+        <div class="buttons">
+          <button class="approve" onclick="markDone(${idx})">Approve</button>
+          <button class="reject" onclick="markDone(${idx})">Dismiss</button>
+        </div>
+      </div>
+    </div>
+  `).join("") : `<div class="empty-state">No JSON action queue returned — check backend logs (agent may have degraded gracefully after an API error).</div>`;
+  document.getElementById("queue-container").innerHTML = queueHtml;
+
+  fetchLog();
+  fetchGraph();
+}
+
+function markDone(idx){
+  const el = document.getElementById(`card-${idx}`);
+  if(el) el.classList.add("done");
+}
+
+async function fetchLog(){
+  try{
+    const res = await fetch(`${API_BASE}/events`);
+    const events = await res.json();
+    const recent = events.slice(-25).reverse();
+    document.getElementById("log-container").innerHTML = recent.map(e => `
+      <div class="log-line"><span class="t">${new Date(e.ts*1000).toLocaleTimeString()}</span> — <span class="a">${e.agent}</span> :: ${e.action}</div>
+    `).join("");
+  }catch(e){ /* backend not up yet */ }
+}
+
+fetchGraph();
+fetchLog();
+</script>
+
+</body>
+</html>
