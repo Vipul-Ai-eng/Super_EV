@@ -1,6 +1,18 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+venv/
 *.db
 .env
+
+# Data files
 data/_nasa_raw/
 data/_battery_skunkworks.tar.gz
+
+# Frontend (Node.js)
+frontend/node_modules/
+frontend/venv/
+node_modules/
+frontend/dist/

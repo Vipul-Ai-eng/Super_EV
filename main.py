@@ -9,9 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from data.graph_store import GRAPH
 from data.mock_data import seed_demo_data
-from core.orchestrator import run_full_cycle
-
-app = FastAPI(title="EV Asset & Supply Chain Intelligence Platform — Ohmwatch")
+from core.orchestrator import run_full_cycle 
+app = FastAPI(title="EV Asset & Supply Chain Intelligence Platform — SuperEV")
 
 app.add_middleware(
     CORSMiddleware,
