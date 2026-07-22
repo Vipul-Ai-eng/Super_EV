@@ -161,19 +161,11 @@ async function handleAction(idx, action, id) {
         // Rollback
         card.classList.remove('done');
         if (badge) badge.textContent = current + 1;
-        // If 405, it's a demo fallback (simulate success)
-        if (e.message.includes('405')) {
-            showToast(`Action ${action}d (simulated — backend 405)`, 'success');
-            // Keep it done
-            card.classList.add('done');
-            if (badge) badge.textContent = Math.max(0, current - 1);
-            return;
-        }
         showToast(`Failed to ${action}: ${e.message}`, 'error');
     }
 }
 
-// ─── Bind Events ──────────────────────────────────────────────
+// Bind Events
 
 function bindEvents() {
     // Auth button
@@ -195,7 +187,7 @@ function bindEvents() {
         }
     });
 
-    // Approve/Dismiss buttons (delegated)
+    // Approve/Dismiss buttons 
     document.addEventListener('click', function(e) {
         const target = e.target.closest('.approve-btn, .dismiss-btn');
         if (!target) return;
