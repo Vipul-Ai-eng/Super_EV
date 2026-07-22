@@ -1,6 +1,4 @@
 """
-base.py
-
 Base class for all specialist agents. Supports two LLM providers,
 switchable via environment variable:
 
@@ -18,9 +16,6 @@ call() implements retries with backoff, a request timeout, and a JSON
 parse fallback that never raises — a malformed or failed response
 degrades to a typed error object instead of crashing the orchestration
 cycle. Latency and token usage are logged per call.
-
-Set ANTHROPIC_API_KEY (default provider) or GROQ_API_KEY (if
-EV_PLATFORM_PROVIDER=groq) in the environment before running.
 """
 
 import json

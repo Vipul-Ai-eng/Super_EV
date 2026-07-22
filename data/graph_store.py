@@ -1,17 +1,8 @@
 """
-Shared Asset & Supply Chain Graph — SQLite-backed persistent version.
-
+Shared Asset & Supply Chain Graph - SQLite-backed persistent version.
 Same public API as the in-memory prototype (upsert_vehicle, upsert_battery,
 upsert_supplier, create_work_order, snapshot, log_event, etc.) so no agent
-code needs to change. The difference: state now survives a server restart,
-which matters on demo day when your process WILL get restarted at least
-once between rehearsal and the real thing.
-
-Each entity type is stored as (id, json_blob) rows — deliberately simple
-for a 6-day build. Post-hackathon, migrate to Postgres/Neo4j by keeping
-this same interface and swapping the implementation underneath; nothing
-in agents/ or core/ needs to know the storage engine changed.
-"""
+code needs to change."""
 
 from __future__ import annotations
 import itertools

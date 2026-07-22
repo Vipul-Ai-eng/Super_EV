@@ -1,9 +1,6 @@
-"""
-Run with:  uvicorn main:app --reload
-Then hit:  POST http://localhost:8000/run-cycle
-"""
-
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

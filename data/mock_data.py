@@ -5,8 +5,7 @@ transitioning from diesel forklifts/tuggers to EVs, sourcing LFP packs
 through a 3-tier supplier network.
 
 Includes ONE planted scenario (a supplier concentration + quality drift
-combo) that the orchestrator is designed to surface — this is your
-scripted "wow" moment for judges. See docs/demo_scenario.md.
+combo) that the orchestrator is designed to surface.
 """
 
 import csv
@@ -19,7 +18,7 @@ random.seed(42)
 
 NASA_CSV_PATH = os.path.join(os.path.dirname(__file__), "nasa_processed.csv")
 # Map real NASA batteries onto 4 specific fleet vehicles so the demo fleet
-# is a REAL + synthetic blend, not fully synthetic. Judges can be told
+# is a REAL + synthetic blend, not fully synthetic.
 # exactly which battery_id in the dashboard is real measured data.
 NASA_BATTERY_TO_VEHICLE = {
     "B0005": "VEH-001",
@@ -59,7 +58,7 @@ def _load_real_nasa_batteries() -> dict[str, dict]:
 
 
 def seed_demo_data():
-    # --- Suppliers (3-tier battery material network) -----------------
+    # Suppliers (3-tier battery material network)
     GRAPH.upsert_supplier("SUP-CO-01", name="CobaltSource DRC Ltd", tier=1,
                            materials=["cobalt"], country="DRC",
                            concentration_share_pct=62, esg_score=41,
@@ -81,7 +80,7 @@ def seed_demo_data():
                            concentration_share_pct=30, esg_score=80,
                            recent_deviation_flags=0)
 
-    # --- Vehicles: mixed diesel + EV intra-plant logistics fleet ------
+    # Vehicles: mixed diesel + EV intra-plant logistics fleet
     duty_profiles = [
         dict(daily_km=38, payload_pct=65, dwell_hrs=9, route_type="intra_plant"),
         dict(daily_km=112, payload_pct=80, dwell_hrs=4, route_type="regional_freight"),
@@ -103,7 +102,6 @@ def seed_demo_data():
         # highest emissions offset) but almost no time for the maintenance
         # bay to actually service it. APM wants urgent action, Maintenance
         # Ops has nowhere to put it, Carbon wants it electrified/prioritized
-        # first. See docs/demo_scenario.md for the narrative.
         if vid == "VEH-004":
             profile = dict(daily_km=195, payload_pct=88, dwell_hrs=2, route_type="long_haul")
 
@@ -138,7 +136,7 @@ def seed_demo_data():
                     data_source="synthetic",
                 )
 
-    # --- Emissions baseline -------------------------------------------
+    # Emissions baseline 
     GRAPH.emissions["baseline"] = {
         "scope1_tpa": 1840,   # diesel combustion, tonnes CO2e/year
         "scope3_tpa": 960,    # upstream battery material + logistics

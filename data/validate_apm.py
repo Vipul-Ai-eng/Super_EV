@@ -1,21 +1,16 @@
 """
 Validates SOH/RUL prediction accuracy against REAL NASA battery ground
-truth. Run this after nasa_ingest.py has produced data/nasa_processed.csv.
+truth. 
 
 Method: for each battery, train on the first 70% of cycles, predict SOH
 for the held-out last 30% using a simple linear-fade baseline, and report
 RMSE against the actual measured SOH. Also reports RUL error: predicted
 vs. actual cycle at which SOH crosses the 70% end-of-life threshold
-(the standard NASA PCoE benchmark definition).
+(the standard NASA PCoE benchmark definition)."
 
-This gives you a REAL, defensible number to put in your pitch deck
-instead of a placeholder ("Innovation"/"Technical Excellence" criteria)
-— e.g. "X% RMSE on real NASA degradation data, not synthetic."
-
-The linear baseline here is intentionally simple — it's the floor your
+The linear baseline here is intentionally simple — it's the floor
 Claude-based APM agent should beat when it has more signal (temperature,
-cycle count, thermal excursions) to reason over. Report BOTH numbers in
-your deck: baseline vs. agent.
+cycle count, thermal excursions) to reason over.
 
 Usage:
     python data/validate_apm.py
@@ -97,11 +92,6 @@ def main():
     print(f"OVERALL SOH RMSE across all batteries: {rmse(all_soh_errors):.2f} percentage points")
     if all_rul_errors:
         print(f"OVERALL mean RUL error: {sum(all_rul_errors)/len(all_rul_errors):.1f} cycles")
-    print()
-    print("Use these numbers as your BASELINE. Re-run the same held-out")
-    print("test cycles through your Claude-based APM agent (feed it the")
-    print("training portion + ask it to predict the test portion's SOH)")
-    print("and report the agent's RMSE next to this baseline in your deck.")
 
 
 if __name__ == "__main__":

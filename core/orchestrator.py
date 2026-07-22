@@ -69,8 +69,8 @@ def run_full_cycle(graph) -> dict:
 
     reconciled = ReconciliationAgent().call(specialist_outputs, max_tokens=2000)
 
-    # The LLM doesn't always assign strictly sequential priorities —
-    # renumber deterministically so the UI always shows a clean 1, 2, 3...
+    # The LLM doesn't always assign strictly sequential priorities -
+    # renumber deterministically so the UI always shows a clean 1, 2, 3..
     if isinstance(reconciled.get("unified_action_queue"), list):
         for idx, item in enumerate(reconciled["unified_action_queue"], start=1):
             if isinstance(item, dict):
