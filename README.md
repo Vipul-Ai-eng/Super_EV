@@ -1,106 +1,243 @@
-# EV Asset & Supply Chain Intelligence Platform — SuperEV
+# SuperEV · AI Operations for EV Fleets
 
-A multi-agent system that unifies six agent ideas from the challenge
-brief (APM, Procurement/Readiness, Supply Chain Risk, Quality, Carbon,
-Maintenance Ops) around **one shared knowledge graph**, with an
-**orchestrator** that reconciles conflicting recommendations instead of
-running six bots side by side.
+SuperEV is an agentic AI platform that unifies **battery intelligence**, **supply chain risk**, **fleet maintenance**, and **carbon analytics** into a single, human-in-the-loop dashboard. It runs six specialist agents, orchestrated by a reconciliation agent, to produce a single prioritized action queue with explicit trade-offs between cost, carbon, risk, and speed.
 
-## Why this architecture wins on the judging criteria
+[![Live Demo](https://img.shields.io/badge/Live_Demo-https://super--ev.onrender.com-brightgreen)](https://super-ev.onrender.com/)
+**Built for ET AI Hackathon 2.0 2026** 
+---
 
-Competitors in this space (Oxmaint, iFactory, FleetRabbit, Sawatch Labs,
-ReSource) each solve ONE slice — battery APM, or fleet readiness, or
-battery-passport traceability — as a standalone product. None of them
-make the agents talk to each other. That cross-agent reconciliation step
-is the differentiator. See `docs/demo_scenario.md` for the demo script.
+## Table of Contents
 
-## What's real vs. synthetic (be upfront about this with judges)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Validation (APM Agent)](#validation-apm-agent)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Setup and Installation](#setup-and-installation)
+- [Environment Variables](#environment-variables)
+- [Running the Application](#running-the-application)
+- [Deployment](#deployment)
+- [API Endpoints](#api-endpoints)
+- [Frontend Development](#frontend-development)
+- [How It Works](#how-it-works)
 
-- **Real, from the official NASA source**: 4 of the fleet's batteries
-  (`VEH-001`–`VEH-004`) are seeded from the official NASA Ames PCoE
-  Li-ion Battery Aging dataset, downloaded directly from
-  `https://phm-datasets.s3.amazonaws.com/NASA/5.+Battery+Data+Set.zip`
-  (folder "1. BatteryAgingARC-FY08Q4"), not a third-party mirror.
-  Citation: B. Saha and K. Goebel (2007), "Battery Data Set", NASA
-  Prognostics Data Repository, NASA Ames Research Center.
-  `data/nasa_ingest.py` reads NASA's own precomputed `Capacity` field
-  directly from the `.mat` files. `data/validate_apm.py` computes a real
-  baseline accuracy number against this ground truth — current result:
-  3.78 percentage points SOH RMSE, 2.3 cycles mean RUL error across all
-  4 batteries.
-- **Synthetic but realistic**: the other 36 vehicles, the 5-supplier
-  network, and route/duty-cycle data — built to be internally consistent
-  and to carry two planted cross-agent conflict scenarios (see
-  `docs/demo_scenario.md`).
-- **Storage is persistent**: `data/graph_store.py` is SQLite-backed
-  (`ev_platform.db`), so state survives a server restart.
+---
 
-## LLM provider: Anthropic (default) or Groq (free)
+## Architecture
 
-Set via environment variable — same code path, same retry/error
-handling, same JSON schema per agent, regardless of provider:
+SuperEV is built around a **shared knowledge graph** (digital twin) that tracks vehicles, batteries, suppliers, materials, and work orders. Six specialist agents read from and write to this graph:
+
+| Agent | Responsibility |
+|-------|----------------|
+| **APM** | SOH / RUL / thermal-event prediction; triggers predictive maintenance. |
+| **Procurement & Readiness** | Duty-cycle-to-EV mapping; transition readiness index. |
+| **Supply Chain Risk** | Supplier concentration, geopolitical exposure, compliance gaps. |
+| **Quality Intelligence** | Process-drift detection, cell-to-pack-to-vehicle traceability. |
+| **Carbon / Net Zero** | Scope 1 + 3 quantification; electrification priority ranking. |
+| **Maintenance Ops** | Optimises schedule vs. charger uptime vs. workshop capacity. |
+
+A single **Orchestrator Agent** collects all outputs, detects cross-agent conflicts, and produces one unified action queue with trade-off explanations.
+
+> See [`architecture.mermaid`](./docs/architecture.mermaid) for the full flow diagram.
+
+---
+
+## Features
+
+- Live fleet intelligence with real-time SOH, supplier risk, and carbon metrics.
+- Six specialist agents, each focused on a discrete domain.
+- Orchestrator with conflict resolution and trade-off explanations.
+- Prioritised action queue with Approve/Dismiss workflow.
+- Full audit trail – every agent write and user decision is logged.
+- Self-hosted frontend with no CDN; built with Tailwind CSS (tree-shaken).
+- REST API for graph, events, cycle triggering, and work order management.
+
+---
+
+## Validation (APM Agent)
+
+The APM agent is validated on public NASA PCoE battery datasets (`B0005`, `B0006`, `B0007`, `B0018`). Run:
 
 ```bash
-# Default: Claude via Anthropic
-export ANTHROPIC_API_KEY=your_key_here
-export EV_PLATFORM_PROVIDER=anthropic   # optional, this is the default
-export EV_PLATFORM_MODEL=claude-sonnet-4-5
-
-# Or: free tier via Groq (no credit card, rate-limited, open-source models)
-export GROQ_API_KEY=your_key_here
-export EV_PLATFORM_PROVIDER=groq
-export EV_PLATFORM_MODEL=llama-3.3-70b-versatile
-```
-
-## Quick start
-
-```bash
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-Open **http://localhost:8000/** for the dashboard. Click
-**RUN ANALYSIS CYCLE** to trigger all six agents + reconciliation live.
-
-Or hit the API directly:
-```bash
-curl -X POST http://localhost:8000/run-cycle
-curl http://localhost:8000/graph
-curl http://localhost:8000/events
-```
-
-To regenerate the real battery dataset from the official `.mat` files:
-```bash
-pip install scipy
-# Download https://phm-datasets.s3.amazonaws.com/NASA/5.+Battery+Data+Set.zip
-# extract "1. BatteryAgingARC-FY08Q4", place the 4 .mat files into
-# data/_nasa_official/
-python data/nasa_ingest.py
 python data/validate_apm.py
 ```
 
-## Project structure
-data/graph_store.py       SQLite-backed shared knowledge graph
-data/mock_data.py         seeds fleet + supplier network, blends in real NASA batteries
-data/nasa_ingest.py       processes official NASA PCoE .mat files
-data/nasa_processed.csv   processed real data (already generated)
-data/validate_apm.py      computes accuracy baseline (RMSE, RUL error) vs ground truth
-agents/base.py            base class: structured-JSON LLM calls, retries, timeouts, fallback
-agents/specialists.py     the 6 agents from the challenge brief
-core/orchestrator.py      runs all agents + reconciles conflicts into 1 action queue
-main.py                   FastAPI app: API + serves the dashboard
-frontend/index.html       control-room dashboard (agent stations, action queue, audit log)
-docs/architecture.mermaid architecture diagram
-docs/demo_scenario.md     3-minute demo script
-docs/pitch_outline.md     slide-by-slide outline mapped to judging weights
-docs/checklist.md         day-by-day team checklist
-## Remaining work for a "production ready" bar
+**Results:**
 
-- [ ] Deploy to a real public URL (Railway/Render/Fly.io)
-- [ ] Add basic auth in front of the deployed instance
-- [ ] Wire "Approve" button on action cards to update `work_orders`
-      status server-side (currently client-side only)
-- [ ] Re-run held-out cycles through the live agent and report agent
-      RMSE next to the baseline RMSE in the deck
-- [ ] Load-test `/run-cycle` 10+ times back-to-back before demo day
-- [ ] Record the full demo video following `docs/demo_scenario.md`
+| Battery | Train/Test split | SOH RMSE (pp) | Actual EOL cyc | Predicted EOL cyc | RUL error (cycles) |
+|---------|------------------|---------------|----------------|-------------------|---------------------|
+| B0005   | 117/51           | 2.00          | 448            | 446               | 2                   |
+| B0006   | 117/51           | 6.29          | 398            | 371               | 27                  |
+| B0007   | 117/51           | 2.51          | None           | 557               | None                |
+| B0018   | 92/40            | 3.78          | 243            | 243               | 0                   |
+
+- **Overall SOH RMSE**: 4.02 percentage points  
+- **Overall mean RUL error**: 9.7 cycles
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Backend** | Python 3.11+, FastAPI, Uvicorn |
+| **LLM Integration** | Groq (or Anthropic via env switch) |
+| **Data Layer** | In-memory graph (SQLite planned) |
+| **Frontend** | Vanilla JS, Tailwind CSS (v3.4.0), npm build |
+| **Styling** | Custom CSS + Tailwind utilities |
+| **Deployment** | Render (free tier) – build script + uvicorn |
+
+---
+
+## Project Structure
+
+```
+Super_EV/
+├── agents/                  # Specialist agents
+│   ├── base.py              # Abstract Agent with retry/error handling
+│   └── specialists.py       # Six agent implementations
+├── core/
+│   └── orchestrator.py      # Reconciliation agent and cycle runner
+├── data/
+│   ├── graph_store.py       # Shared knowledge graph
+│   ├── mock_data.py         # Demo seeding (NASA PCoE data)
+│   ├── nasa_ingest.py       # NASA battery data loader
+│   └── validate_apm.py      # APM validation script
+├── docs/
+│   └── architecture.mermaid # Architecture diagram
+├── frontend/                # Static frontend assets
+│   ├── index.html           # Entry point (links to ./dist/output.css)
+│   ├── css/                 # Custom styles
+│   ├── js/                  # Application logic (API, UI, events)
+│   ├── components/          # Reusable UI components
+│   ├── dist/                # Generated Tailwind CSS (committed)
+│   ├── src/input.css        # Tailwind source
+│   ├── package.json         # npm scripts (watch, build)
+│   └── tailwind.config.js   # Tailwind configuration
+├── main.py                  # FastAPI entry point
+├── build.sh                 # Render build script
+|── requirements.txt         # Python dependencies
+```
+
+---
+
+## Setup and Installation
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+ (for frontend build)
+- Groq API key (or Anthropic)
+
+### Clone and Install
+
+```bash
+git clone https://github.com/Vipul-Ai-eng/Super_EV.git
+cd Super_EV
+
+# Python virtual environment (Windows)
+python -m venv venv
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Build frontend
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+---
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+EV_PLATFORM_PROVIDER=groq
+EV_PLATFORM_MODEL=llama-3.1-8b-instant
+```
+
+---
+
+## Running the Application
+
+### Local Development
+
+```bash
+uvicorn main:app --reload
+```
+
+Open `http://localhost:8000`.
+
+## Deployment
+
+SuperEV deploys on Render's free tier:
+**Live URL:** [https://super-ev.onrender.com/](https://super-ev.onrender.com/)
+
+### Deployment Steps
+
+1. Push code to GitHub.
+2. On Render, create a **New Web Service** → connect `Super_EV`.
+3. Configure:
+
+| Field | Value |
+|-------|-------|
+| **Build Command** | `./build.sh` |
+| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| **Plan** | Free |
+
+4. Add environment variables (same as `.env` above).
+5. Click **Create Web Service**.
+
+> Render's free tier sleeps after 15 minutes. The first request after sleep may take 10–30 seconds to wake up.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/graph` | Knowledge graph snapshot |
+| `GET` | `/events` | Full audit trail |
+| `POST` | `/run-cycle` | Trigger all agents + orchestrator |
+| `GET` | `/work-orders` | List all work orders |
+| `PATCH` | `/work-orders/{id}` | Approve/dismiss a work order |
+| `GET` | `/health` | Health check |
+
+---
+
+## Frontend Development
+
+```bash
+cd frontend
+npm run watch   # auto-rebuild on changes
+npm run build   # production build (minified)
+```
+
+- `index.html` links to `./dist/output.css` – no CDN.
+- Tailwind is local and tree-shaken.
+
+---
+
+## How It Works
+
+1. User signs in (simulated demo).
+2. Click **Run Analysis Cycle** – calls `POST /run-cycle`.
+3. Six agents run sequentially, writing structured findings.
+4. Orchestrator detects conflicts and builds a single action queue.
+5. Frontend displays the queue with Approve/Dismiss buttons.
+6. User action sends `PATCH /work-orders/{id}` – status updates and logs to audit trail.
+
+---
+
+## License
+
+MIT © 2026 SuperEV Team
+
+---
+
+**SuperEV** – built for the **ET AI Hackathon 2.0 2026**.
